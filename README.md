@@ -1,82 +1,76 @@
 # fdf
 
-Simple 3D wireframe viewer built with MiniLibX (Linux/X11).
+3D wireframe viewer in C — reads a `.fdf` height map and renders it as an isometric projection with interactive controls.
 
-This project reads a `.fdf` height map file and renders it as an isometric wireframe with interactive controls for zoom, translation, and rotation.
+---
 
-## Features
-
-- Parse `.fdf` maps with altitude values and optional per-point hex colors.
-- Draw wireframe lines between right and bottom neighbors.
-- Interactive camera-style controls (move, zoom, rotate).
-- Randomized visual theme on startup (background/panel/map colors).
-
-## Requirements
-
-- Linux
-- `cc` (or `gcc`/`clang`)
-- `make`
-- X11 development libraries (commonly `libx11-dev` and `libxext-dev`)
-- `zlib` development package
-
-If needed on Debian/Ubuntu:
+## Build & run
 
 ```bash
-sudo apt update
+# Dependencies (Debian/Ubuntu)
 sudo apt install build-essential libx11-dev libxext-dev zlib1g-dev
-```
 
-## Build
-
-From the project root:
-
-```bash
 make
-```
-
-Useful targets:
-
-```bash
-make clean
-make fclean
-make re
-```
-
-## Run
-
-```bash
 ./fdf maps/42.fdf
 ```
 
-Any valid map in `maps/` can be used.
+**Make targets:** `make` · `make clean` · `make fclean` · `make re`
+
+---
 
 ## Controls
 
-- `Esc`: quit
-- `Arrow keys`: translate
-- `+` / `-` (keypad): zoom in / out
-- `r`: rotate isometric angle
-- `7` / `8` (keypad): rotate around x-axis
-- `4` / `5` (keypad): rotate around y-axis
-- `1` / `2` (keypad): rotate around z-axis
+| Key | Action |
+|-----|--------|
+| `Arrow keys` | Translate |
+| `+` / `-` | Zoom in / out |
+| `r` | Rotate isometric angle |
+| `7` / `8` | Rotate around x-axis |
+| `4` / `5` | Rotate around y-axis |
+| `1` / `2` | Rotate around z-axis |
+| `ESC` | Exit |
 
-## Map Format
+---
 
-Each file is a grid of values separated by spaces.
+## Map format
 
-- Basic point: `z`
-- Colored point: `z,0xRRGGBB`
+A grid of space-separated values. Points can carry an optional hex color:
 
-Example:
-
-```text
+```
 0  0  0  0
 0  1,0xFF0000  2,0x00FF00  0
 0  0  0,0x0000FF  0
 ```
 
-## Notes
+`z` — altitude · `z,0xRRGGBB` — altitude with color
 
-- Program expects exactly one map file argument.
-- Window size is initialized to `1300x800`.
-- This repository includes `mlx_linux/` and `libft_pf_gnl/` as local dependencies used by the main Makefile.
+---
+
+## How it works
+
+### Isometric projection
+
+The height map is a 2D grid where each value represents altitude (`z`). To render it in 3D, each point `(x, y, z)` is projected onto the screen using an isometric transformation:
+
+```
+screen_x = (x - y) * cos(angle)
+screen_y = (x + y) * sin(angle) - z
+```
+
+At the classic isometric angle (~26.57°), this produces the familiar 2:1 diamond grid. The viewer can rotate around all three axes by applying rotation matrices before projection, which is what the keypad controls do.
+
+### Bresenham line algorithm
+
+Once two adjacent points are projected onto the screen, a line is drawn between them. Rather than using floating-point arithmetic (slow, imprecise), the engine uses Bresenham's line algorithm — an integer-only method that decides which pixel to plot at each step by tracking an error term.
+
+The key idea: for a line from `(x0, y0)` to `(x1, y1)`, at each step you advance along the dominant axis by 1 and accumulate the error of the secondary axis. When the error exceeds 0.5 pixels, you step the secondary axis and reset. This produces clean, gap-free lines with no floating-point math.
+
+Color interpolation along the line is handled by linearly blending the start and end point colors based on the current step ratio.
+
+---
+
+
+
+- Randomized color theme on startup.
+- Window size: 1300×800.
+- Requires exactly one map file as argument.
