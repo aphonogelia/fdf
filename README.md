@@ -4,6 +4,8 @@
 
 ---
 
+![Project screenshot](./source/screenshot.png)
+
 ## Build & run
 
 ```bash
